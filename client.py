@@ -4,10 +4,16 @@ import errno
 
 HEADER_LENGTH = 10
 
+#ip address of the server to connect to
 IP ="127.0.0.2"
+
+#the tcp port number on the server to connect to
 PORT = 1234
 
+#takes in username input
 my_username= input("Username: ")
+
+#create tcp socket that will connect to server
 client_socket = socket.socket(socket.AD_INET, socket.SOCK_STREAM)
 client_socket.connect((IP,PORT))
 client_socket.setblocking(False)
