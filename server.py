@@ -2,17 +2,26 @@ import socket
 import select
 
 HEADER_LENGTH = 10
+
+#ip address for server to listen on
 IP = "127.0.0.2"
+
+#tcp port number for server to listen on
 PORT = 1234
 
+#create tcp socket to use for listening to connections
 server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server_socket.setssockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
+#bind server socket to these addresses.
 server_socket.bind((IP, PORT))
 
+#make socket listen for connections
 server_socket.listen() 
 
+#create list of sockets connected to the server
 sockets_lists = [server_socket]
+
 
 clients = {}
 
