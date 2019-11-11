@@ -62,12 +62,12 @@ while True:
 	#check for error codes, if none throw up continue as normal
 	except IOError as e:
 		if e.errno != errno.EAGAIN or e.errno != errno.EWOULDBLOCK:
-			print('read error', str(e))
+			print(read error", str(e))
 			sys.exit();
 		continue
 	
 	#Other exceptions	
 	except Exception as e:
-		print('General error', str(e))
+		print("General error", str(e))
 		sys.exit()
 		pass
