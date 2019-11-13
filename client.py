@@ -14,13 +14,13 @@ PORT = 1234
 my_username= input("Username: ")
 
 #create tcp socket that will connect to server
-client_socket = socket.socket(socket.AD_INET, socket.SOCK_STREAM)
-client_socket.connect((IP,PORT))
+client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+client_socket.connect((IP, PORT))
 client_socket.setblocking(False)
 
 #username choice for client
 username = my_username.encode("utf-8")
-username_header = f"{len(username):<{HEADER_LENGTH}}".encode("utf-8")
+username_header = f"{len(username) :< {HEADER_LENGTH}}".encode('utf-8')
 client_socket.send(username_header+username)
 
 #iterates the sending/receiving of msgs
@@ -43,7 +43,7 @@ while True:
 			username_header = client_socket.recv(HEADER_LENGTH)
 			
 			#if we received no data, server closes connection
-			if not len(username_header)
+			if not len(username_header) :
 				print("connection closed by server")
 				sys.exit()
 
@@ -62,7 +62,7 @@ while True:
 	#check for error codes, if none throw up continue as normal
 	except IOError as e:
 		if e.errno != errno.EAGAIN or e.errno != errno.EWOULDBLOCK:
-			print(read error", str(e))
+			print("Read error: {}".format(str(e)))
 			sys.exit();
 		continue
 	
