@@ -1,6 +1,7 @@
 import socket
 import select
 import errno
+import sys
 
 HEADER_LENGTH = 10
 
@@ -20,8 +21,8 @@ client_socket.setblocking(False)
 
 #username choice for client
 username = my_username.encode("utf-8")
-username_header = f"{len(username) :< {HEADER_LENGTH}}".encode('utf-8')
-client_socket.send(username_header+username)
+username_header = f"{len(username):<{HEADER_LENGTH}}".encode('utf-8')
+client_socket.send(username_header + username)
 
 #iterates the sending/receiving of msgs
 while True:
@@ -32,9 +33,9 @@ while True:
 		#encode to bytes
 		message = message.encode("utf-8")
 		#prepare header and convert to bytes
-		message_header = f"{len(message) :< {HEADER_LENGTH}}".encode("utf-8")
+		message_header = f"{len(message):<{HEADER_LENGTH}}".encode("utf-8")
 		#then send
-		client_socket.send(message_header+message)
+		client_socket.send(message_header + message)
 
 	#eventually, errors will occur as there will be no more messages to recieve anymore
 	try:	
@@ -43,12 +44,12 @@ while True:
 			username_header = client_socket.recv(HEADER_LENGTH)
 			
 			#if we received no data, server closes connection
-			if not len(username_header) :
+			if not len(username_header):
 				print("connection closed by server")
 				sys.exit()
 
 			#get the username
-			username_length = int(username_length.decode("utf-8").strip())
+			username_length = int(username_header.decode("utf-8").strip())
 			username = client_socket.recv(username_length).decode("utf-8")
 
 			#get the message
@@ -61,9 +62,9 @@ while True:
 
 	#check for error codes, if none throw up continue as normal
 	except IOError as e:
-		if e.errno != errno.EAGAIN or e.errno != errno.EWOULDBLOCK:
-			print("Read error: {}".format(str(e)))
-			sys.exit();
+		if e.errno != errno.EAGAIN and e.errno != errno.EWOULDBLOCK:
+			print("Read error: ", str(e))
+			sys.exit()
 		continue
 	
 	#Other exceptions	

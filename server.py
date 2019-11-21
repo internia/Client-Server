@@ -19,7 +19,7 @@ server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 server_socket.bind((IP, PORT))
 
 #make socket listen for connections
-server_socket.listen(10) 
+server_socket.listen() 
 
 #create list of sockets connected to the server
 sockets_lists = [server_socket]
@@ -69,18 +69,19 @@ while True:
 			#save client username as the value to the key which is the socket object
 			clients[client_socket] = user
 
-			print("accepted new connection from {}:{}, username: {}".format(*client_address, user['data'].decode('utf-8')))
+			print(f"accepted new connection from {client_address[0]}:{client_address[1]} username: {user['data'].decode('utf-8')}")
+				#.format(*client_address, user['data'].decode('utf-8')))
 
 		#if not new client
 	else:
 		message = receive_msg(notified_socket)
 
 		#before we attempt to read msg, make sure it exists
-		if message is False:
-			print("Closed connection from {}".format(clients[notified_socket]['data'].decode('utf-8')))
-			sockets_lists.remove(notified_socket)
-			del clients[notified_socket]
-			continue
+	##	if message is False:
+	##		print(f"Closed connection from {clients[notified_socket]['data'].decode('utf-8')}")
+	##		sockets_lists.remove(notified_socket)
+	##		del clients[notified_socket]
+	##		continue
 
 		#print message info
 		user = clients[notified_socket]
@@ -92,7 +93,7 @@ while True:
 			#with the exception of the sender...
 			if client_socket != notified_socket:
 				#send user and message, both w/ headers
-				client_socket.send(user['header']+user['data']+message['header']+message['data'])
+				client_socket.send(user['header'] + user['data'] + message['header'] + message['data'])
 
 
 	#handles socket exceptions
