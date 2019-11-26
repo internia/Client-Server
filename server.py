@@ -6,24 +6,24 @@ HEADER_LENGTH =10
 IP= "127.0.0.1"
 PORT= 1234
 
-server_socket= socket.socket(socket.AF_INET, socket.SOCK_STREAM) 
-server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR,1) 
-server_socket.bind((IP, PORT)) 
+server_socket= socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR,1)
+server_socket.bind((IP, PORT))
 server_socket.listen()
 
-sockets_list=[server_socket] 
+sockets_list=[server_socket]
 
-clients = {} 
+clients = {}
 
 
 def receive_message(client_socket):
 	try:
-		message_header= client_socket.recv(HEADER_LENGTH) 
-		
+		message_header= client_socket.recv(HEADER_LENGTH)
+
 		if not len(message_header):
 			return False
 
-		message_length= int(message_header.decode("utf-8").strip()) 
+		message_length= int(message_header.decode("utf-8").strip())
 		return {"header": message_header, "data": client_socket.recv(message_length)}
 
 	except:
@@ -35,7 +35,7 @@ while True:
 
 	for notified_socket in read_sockets:
 		if notified_socket == server_socket:
-			client_socket, client_address= server_socket.accept() 
+			client_socket, client_address= server_socket.accept()
 
 			user = receive_message(client_socket)
 			if user is False:
@@ -66,3 +66,23 @@ while True:
 	for notified_socket in exception_sockets:
 		sockets_list.remove(notified_socket)
 		del clients[notified_socket]
+
+
+#CHANNELS
+
+class ChannelsList:
+	def __init__(self):
+		self.head = None
+
+
+class Channel:
+	def __init__(self, name = None, members = None):
+		self.name = name
+		self.members = {}
+		self.next = None
+
+#CHANNELS TO-DO - yous can ignore this it's just notes to myslef
+#parse messages
+#if message starts with & or #
+#join channel with channel name entered
+#send message to all members in channel
