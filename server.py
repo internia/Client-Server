@@ -68,18 +68,13 @@ while True:
 		del clients[notified_socket]
 
 
+
 #CHANNELS
+#class Channels:
+	#ChannelsList = {}
+	#ChannelMembers = {}
 
-class ChannelsList:
-	def __init__(self):
-		self.head = None
 
-
-class Channel:
-	def __init__(self, name = None, members = None):
-		self.name = name
-		self.members = {}
-		self.next = None
 
 #CHANNELS TO-DO - yous can ignore this it's just notes to myslef
 #parse messages
