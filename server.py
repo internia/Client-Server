@@ -30,6 +30,18 @@ def receive_message(client_socket):
 		return False
 
 
+def parseInput(message):
+	#split message by space
+	messageArray = message.split()
+	#if the first word of the message is join
+	if messageArray[0] == "join":
+		#check if the start of the next word contains & or #
+		if messageArray[1].__contains__("&") or messageArray[1].__contains("#"):
+			#store second word of message in temp variable
+			temp = messageArray[1]
+			#store contents of temp variable from second character onwards
+			channelName = temp[1:]
+
 while True:
 	read_sockets, _, exception_sockets = select.select(sockets_list, [], sockets_list)
 
@@ -58,6 +70,7 @@ while True:
 
 			user= clients[notified_socket]
 			print(f"Received message from {user['data'].decode('utf-8')}: {message['data'].decode('utf-8')}")
+			parseInput(f"{message['data'].decode('utf-8')}")
 
 			for client_socket in clients:
 				if client_socket != notified_socket:
@@ -69,10 +82,12 @@ while True:
 
 
 
+
 #CHANNELS
-#class Channels:
-	#ChannelsList = {}
-	#ChannelMembers = {}
+class Channels:
+	ChannelsList = {}
+	ChannelMembers = {}
+
 
 
 
