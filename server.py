@@ -62,14 +62,19 @@ class Test:
 	def joinchannel(self, user, channelName):
 		print(channelsList)
 		print(channelName)
-		if channelName in channelsList.name:
+		if findChannel(channelName):
 			print("exists")
 		else:
 			print("does not exist")
 			newChannel = Channel(user,channelName)
 			channelsList.append(newChannel)
-			print("created")
 
+
+def findChannel(channelName):
+	for Channel in channelsList:
+		if Channel.name == channelName:
+			return True
+	return False
 
 test = Test()
 while True:
