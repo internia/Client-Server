@@ -22,12 +22,16 @@ msgMax = 4;
 server = "127.0.0.1"
 channel = "#test"
 botnick = "bot"
-sentUser = False
-sentNick = False
 
 irc = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 print "\nConnecting to:" + server
 irc.connect((server, 6667))
+
+irc.send('NICK ' + "bot" + '\r\n')
+irc.send('USER ' + "bot" + ' 0 * :' + "bot" + '\r\n')
+
+irc.send("JOIN " + channel + "\n")
+irc.send("PRIVMSG " + channel + " :Available Commands: !host, !ping, !time, !day, and !leave\n")
 
 try:
   while 1:
@@ -39,20 +43,6 @@ try:
 
     if text.find("PING") != -1:
       irc.send("PONG " + text.split()[1] + "\n")
-
-    if sentUser == False:
-      irc.send("USER " + botnick + " " + botnick + " " + botnick + " :This is a fun bot\n")
-      sentUser = True
-      continue
-
-    if sentUser and sentNick == False:
-      irc.send("NICK " + botnick + "\n")
-      sentNick = True
-      continue
-
-    if text.find("255 " + botnick) != -1:
-      irc.send("JOIN " + channel + "\n")
-      irc.send("PRIVMSG " + channel + " :Available Commands: !host, !ping, !time, !day, and !leave\n")
 
 #Commands start here, be sure to join the #test channel
     if text.find("PRIVMSG " + channel) != -1:
