@@ -21,14 +21,14 @@ msgMax = 4;
 
 server = "127.0.0.1"
 channel = "#test"
-botnick = "bot"
+botnick = "probot"
 
 irc = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 print "\nConnecting to:" + server
 irc.connect((server, 6667))
 
-irc.send('NICK ' + "bot" + '\r\n')
-irc.send('USER ' + "bot" + ' 0 * :' + "bot" + '\r\n')
+irc.send('NICK ' + botnick + '\r\n')
+irc.send('USER ' + botnick + ' 0 * :' + botnick + '\r\n')
 
 irc.send("JOIN " + channel + "\n")
 irc.send("PRIVMSG " + channel + " :Available Commands: !host, !ping, !time, !day, and !leave\n")
@@ -61,39 +61,22 @@ try:
         irc.send("PRIVMSG " + channel + " :Current Time: " + datetime.now().strftime('%H:%M:%S') + "\n")
            
       if text.find("!day") != -1:
-        totalDays = math.floor((365.25*(datetime.now().year-2001))+(31*(datetime.now().month-1)))
-        
-        if datetime.now().month > 2:
-         if datetime.now().year%4 == 0:
-           totalDays -= 2
-         else:
-           totalDays -= 3
-        if datetime.now().month > 4: #subtract days if April has past
-          totalDays -= 1
-        if datetime.now().month > 5: #subtract days if June has past
-          totalDays -= 1
-        if datetime.now().month > 9: #subtract days if September has past
-          totalDays -= 1
-        if datetime.now().month > 11: #subtract days if November has past
-          totalDays -= 1
-
-        totalDays += datetime.now().day
-        dayNumber = totalDays%7 #remainder 0 = Sunday, 1 = Monday, 2 = Tuesday ect.
+        dayNumber = datetime.today().weekday()
 
         if dayNumber == 0:
-          day = "Sunday"
-        elif dayNumber == 1:
           day = "Monday"
-        elif dayNumber == 2:
+        elif dayNumber == 1:
           day = "Tuesday"
-        elif dayNumber == 3:
+        elif dayNumber == 2:
           day = "Wednesday"
-        elif dayNumber == 4:
+        elif dayNumber == 3:
           day = "Thursday"
-        elif dayNumber == 5:
+        elif dayNumber == 4:
           day = "Friday"
-        elif dayNumber == 6:
+        elif dayNumber == 5:
           day = "Saturday"
+        elif dayNumber == 6:
+          day = "Sunday"
           
         irc.send("PRIVMSG " + channel + " :Current Day: " + day + "\n")
     elif text.find("PRIVMSG " + botnick) != -1:
