@@ -28,7 +28,7 @@ class Channel():
         self.members.append(user)
 
     def add_member(self, user):
-        self.members.add(user)
+        self.members.append(user)
 
 
 def receive_message(client_socket):
@@ -60,21 +60,23 @@ def parseInput(test, user, message):
 
 class Test:
 	def joinchannel(self, user, channelName):
-		print(channelsList)
-		print(channelName)
-		if findChannel(channelName):
-			print("exists")
-		else:
+        print(channelsList)
+        print(channelName)
+        index = findChannel(channelName)
+        if index != -1:
+            print("exists")
+            channelsList[index].add_member(user)
+        else:
 			print("does not exist")
 			newChannel = Channel(user,channelName)
 			channelsList.append(newChannel)
 
 
 def findChannel(channelName):
-	for Channel in channelsList:
-		if Channel.name == channelName:
-			return True
-	return False
+    for index, Channel in enumerate(channelsList):
+        if Channel.name == channelName:
+            return index
+    return -1
 
 test = Test()
 while True:
