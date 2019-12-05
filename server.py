@@ -54,33 +54,14 @@ class Client():
 		self.hostname = hostN
 		self.socket = socket
 
+	def set_user_stuff(self, userN, hostN, serverN, realN):
+		self.realname = realN
+		self.servername = serverN
+		self.username = userN
+		self.hostname = hostN
 
-
-def receive_message(client_socket):
-	try:
-		#first step to receive message is to read the header
-		message_header= client_socket.recv(HEADER_LENGTH)
-		#if connection closes, there is no header
-		if not len(message_header):
-			return False
-
-		#convert header to a length
-		message_length= int(message_header.decode("utf-8").strip())
-
-		#Accepted connection from 10.0.42.19:52221.
-		#[10.0.42.19:52221] -> b'CAP LS 302\r\n'
-		#[10.0.42.19:52221] -> b'NICK qmbuser\r\nUSER qmbuser qmbuser 10.0.42.17 :realname\r\n'
-
-
-		#prints header and data
-		return {"header": message_header, "data": client_socket.recv(message_length)}
-		print(('NICK ' + botnick + '\r\n').encode('utf8'))
-
-
-	except:
-		return False
-
-
+	def setNickname(self, newNick):
+		self.nickname = newNick
 
 def parseInput(test, user, message):
 	#split message by space
@@ -121,6 +102,9 @@ def findChannel(channelName):
 
 test = Test()
 
+outputSockets = []
+messageQueues = {}
+
 def connect_server():
 
 	#in a continous loop...
@@ -138,7 +122,7 @@ def connect_server():
 
 				client_socket.setblocking(0)
 				
-				user = receive_message(client_socket)
+				user = receiveMsg(client_socket)
 
 				#append new client to socket list
 				sockets_list.append(client_socket)
@@ -146,71 +130,94 @@ def connect_server():
 				#save client username as the value to the key which is the socket object
 				clients[client_socket] = user
 
-			#if not new client
+			#if not new clientJO
 			else:
-				message = receive_message(notified_socket)
+				message = receiveMsg(notified_socket)
+
+
+				if(message == ""):
+					if notified_socket in outputSockets:
+						outputSockets.remove(notified_socket)
+					sockets_list.remove(notified_socket)
+					notified_socket.close()
+				try:
+					client = clients[notified_socket]
+				except KeyError as k:
+					print(k)
 
 				input = message.split("\r\n")
 
 				for x in range(len(input)):
 					if(input[x] != ""):
+						#print("lines = ", input[x])
 						splitInput = input[x].split(" ")
 
-					if(splitInput[0] == "CAP"):
-						print("DATA : ", splitInput[0])
-					elif(splitInput[0] == "USER"):
-						if(client_socket in clients):
-							clients[client_socket].set
-						else:
-							print("added", splitInput[1])
-							print("client socket:", clients[client_socket])
+						#if(splitInput[0] == "CAP"):
+							#print("DATA : ", splitInput[0])
 
-					elif(splitInput[0]=="JOIN"):
-						print("Join channel")
-						tempChannel = splitInput[1]
-						channelName= tempChannel[1:]
+						if(splitInput[0] == "USER"):
 
-						if((len(channelsList)==0) or channelName not in channelsList): 
+							if(client_socket in clients):
+								client = clients[client_socket]
+								client.set_user_stuff(splitInput[1], splitInput[2], splitInput[3], splitInput[4])
+								#clients[client_socket].set
+							else:
+								clients[client_socket] = Client(client_socket, userN = splitInput[1], hostN = splitInput[2], serverN = splitInput[3], realN = splitInput[4])
+								print("added", splitInput[1])
+								print("client socket:", clients[client_socket])
 
+						elif(splitInput[0]=="JOIN"):
+
+							print("Join channel")
 							tempChannel = splitInput[1]
 							channelName= tempChannel[1:]
 
-							channel = Channel(channelName)
+							if((len(channelsList)==0) or channelName not in channelsList): 
 
-							channelsList[channelName]= channel
+								tempChannel = splitInput[1]
+								channelName= tempChannel[1:]
 
+								#channelsList[channelName]= channel
+								
+								#irc.sendall("does not exist")
+								newChannel = Channel(user,channelName)
+								channelsList.append(newChannel)
 
-						try:
-							user = clients[client_socket]
-						except KeyError as k:
-							print(k)
+							try:
+								user = clients[client_socket]
+							except KeyError as k:
+								print(k)
 
-						channelsList[channelName].addUser(user)
+							index = findChannel(channelName)
+							#channelsList[channelName].addUser(user)
+							channelsList[index].add_member(user)
 
-						nick = "".join(u.nickn for u in channelsList[channelName].members)
+							#nicknames = "".join(y.nick for y in channelsList[index].members)
+							nicknames = " ".join(y.nickname for y in channelsList[index].members)
 
-						sendChannel(commandUser("JOIN " + splitInput[1], client), channelsList[channelName], notified_socket, sent =True )
-						message=(commandServer("Error 331: " +client.nickname +" ="+channelName +" :No topic is set")) + \
-								(commandServer("Error 353: " +client.nickname +" ="+channelName + nick )) + \
-								(commandServer("Error 353: " +client.nickname +" ="+channelName +" End of names"))
-						sendMsg(notified_socket, message)
+							sendChannel(commandUser("JOIN " + splitInput[1], client), channelsList[channelName], notified_socket, sent =True )
+							message=(commandServer("Error 331: " +client.nickname +" ="+channelName +" :No topic is set")) + \
+									(commandServer("Error 353: " +client.nickname +" ="+channelName + nicknames )) + \
+									(commandServer("Error 353: " +client.nickname +" ="+channelName +" End of names"))
+							sendMsg(notified_socket, message)
 
-					elif(splitInput[0]=="NICK"):
-						if(client_socket in clients):
-							clients[client_socket].setNick(splitInput[1])
-						else:
-							clients[client_socket].Client(client_socket, nickn = splitInput[1])
+						elif(splitInput[0]=="NICK"):
+							if(client_socket in clients):
+								client = clients[client_socket]
+								client.setNickname(splitInput[1])
+							else:
+								clients[client_socket] = Client(client_socket, nickn = splitInput[1])
 
-					elif(splitInput[0]=="PRIVMSG"):
-						if(splitInput[1][0] == "#"):
-							channel = channelsList[channelName]
-							sendChannel(commandUser(input[x], clients[notified_socket]))
-						else:
-							nickname = splitInput[1]
-							for i in range(len(channel.members)):
-								target = channel.members[i]
-								if(target.nickname == nickname):
-									sendMsg(target.socket, commandUser(input[x], clients[notified_socket]))
+						elif(splitInput[0]=="PRIVMSG"):
+							if(splitInput[1][0] == "#"):
+								channel = channelsList[channelName]
+								sendChannel(commandUser(input[x], clients[notified_socket]))
+							else:
+								nickname = splitInput[1]
+								for i in range(len(channel.members)):
+									target = channel.members[i]
+									if(target.nickname == nickname):
+										sendMsg(target.socket, commandUser(input[x], clients[notified_socket]))
 
 					else:
 
@@ -221,14 +228,15 @@ def connect_server():
 					print(f"Closed connection from {clients[notified_socket]['data'].decode('utf-8')}")
 					sockets_list.remove(notified_socket)
 					del clients[notified_socket]
-					continue
+					#continue
 					
 					#iterate through connected clients
 					for client_socket in clients:
 						#with the exception of the sender
 						if client_socket != notified_socket:
 							#send user and message, both with headers
-							client_socket.send(user['header']+ user['data']+ message['header']+ message['data'])
+							print("aaaaa")
+							#client_socket.send(user['header']+ user['data']+ message['header']+ message['data'])
 
 		#handles socket exception
 		for notified_socket in exception_sockets:
