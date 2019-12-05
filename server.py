@@ -63,6 +63,10 @@ class Client():
 	def setNickname(self, newNick):
 		self.nickname = newNick
 
+	def getNickname(self):
+		return self.nickname
+
+
 def parseInput(test, user, message):
 	#split message by space
 	messageArray = message.split()
@@ -152,10 +156,10 @@ def connect_server():
 						#print("lines = ", input[x])
 						splitInput = input[x].split(" ")
 
-						#if(splitInput[0] == "CAP"):
-							#print("DATA : ", splitInput[0])
+						if(splitInput[0] == "CAP"):
+							print("DATA : ", splitInput[0])
 
-						if(splitInput[0] == "USER"):
+						elif(splitInput[0] == "USER"):
 
 							if(client_socket in clients):
 								client = clients[client_socket]
@@ -183,10 +187,10 @@ def connect_server():
 								newChannel = Channel(user,channelName)
 								channelsList.append(newChannel)
 
-							try:
-								user = clients[client_socket]
-							except KeyError as k:
-								print(k)
+							#try:
+							user = clients[client_socket]
+							#except KeyError as k:
+								#print(k)
 
 							index = findChannel(channelName)
 							#channelsList[channelName].addUser(user)
