@@ -21,36 +21,41 @@ irc.listen()
 print(f"Server established via Port:" + str(PORT))
 
 #create list of sockets connected to the server
-sockets_list=[irc]
-
-#dictionary of clients connected 
-clients = {}
+socketsList=[irc]
 
 #create list of channels
 channelsList = []
 
+#dictionary of clients connected 
+clients = {}
+
 def main():
 	connect_server()
 
-
+#channel class initialises the channel members and names, and creates function which allows us to add members
 class Channel():
+	#create list of members
 	members = []
+	#channel name
 	name = ""
 
+	#initialising the variables used in the class
 	def __init__(self, user, name):
 		self.name = name
 		self.members.append(user)
 
+	#when this method is called, add new member to the channel member list
 	def add_member(self, user):
 		self.members.append(user)
 
+#client class initialises/gets/sets all the variables used to deal with the clients
 class Client():
 	
 	def __init__(self, socket, nick=None, userN=None, hostN=None, serverN=None, realN=None):
 		self.nickname = nick
 		self.realname = realN
 		self.servername = serverN
-		self.username = UserN
+		self.username = userN
 		self.hostname = hostN
 		self.socket = socket
 
@@ -66,8 +71,8 @@ class Client():
 	def getNickname(self):
 		return self.nickname
 
-
-def parseInput(test, user, message):
+#This function parses the user input to determine which function the execute
+def parseInput(join, user, message):
 	#split message by space
 	messageArray = message.split()
 	#if the first word of the message is join
@@ -79,9 +84,9 @@ def parseInput(test, user, message):
 			temp = messageArray[1]
 			#store contents of temp variable from second character onwards
 			channelName = temp[1:]
-			test.joinchannel(user,channelName)
+			join.joinchannel(user,channelName)
 
-class Test:
+class Join:
 	def joinchannel(self, user, channelName):
 		print(channelsList)
 		print(channelName)
@@ -104,7 +109,7 @@ def findChannel(channelName):
 			return index
 	return -1
 
-test = Test()
+join = Join()
 
 outputSockets = []
 messageQueues = {}
@@ -115,7 +120,7 @@ def connect_server():
 	while True:
 
 		#recieve messages for all of the client sockets, then send messages to all client sockets
-		receive_sockets, _, exception_sockets = select.select(sockets_list, [], sockets_list)
+		receive_sockets, _, exception_sockets = select.select(socketsList, [], socketsList)
 
 		#iterates through sockets which have data to be read 
 		for notified_socket in receive_sockets:
@@ -126,15 +131,7 @@ def connect_server():
 
 				client_socket.setblocking(0)
 				
-				user = receiveMsg(client_socket)
-
-				#append new client to socket list
-				sockets_list.append(client_socket)
-				
-				#save client username as the value to the key which is the socket object
-				clients[client_socket] = user
-
-			#if not new clientJO
+				socketsList.append(client_socket)
 			else:
 				message = receiveMsg(notified_socket)
 
@@ -142,8 +139,9 @@ def connect_server():
 				if(message == ""):
 					if notified_socket in outputSockets:
 						outputSockets.remove(notified_socket)
-					sockets_list.remove(notified_socket)
+					socketsList.remove(notified_socket)
 					notified_socket.close()
+				
 				try:
 					client = clients[notified_socket]
 				except KeyError as k:
@@ -153,7 +151,7 @@ def connect_server():
 
 				for x in range(len(input)):
 					if(input[x] != ""):
-						#print("lines = ", input[x])
+						
 						splitInput = input[x].split(" ")
 
 						if(splitInput[0] == "CAP"):
@@ -162,14 +160,14 @@ def connect_server():
 						elif(splitInput[0] == "USER"):
 
 							if(client_socket in clients):
-								client = clients[client_socket]
-								client.set_user_stuff(splitInput[1], splitInput[2], splitInput[3], splitInput[4])
+								user = clients[client_socket]
+								user.set_user_stuff(splitInput[1], splitInput[2], splitInput[3], splitInput[4])
 								#clients[client_socket].set
 							else:
 								clients[client_socket] = Client(client_socket, userN = splitInput[1], hostN = splitInput[2], serverN = splitInput[3], realN = splitInput[4])
 								print("added", splitInput[1])
 								print("client socket:", clients[client_socket])
-
+					    #manages the joining of channels 
 						elif(splitInput[0]=="JOIN"):
 
 							print("Join channel")
@@ -181,41 +179,35 @@ def connect_server():
 								tempChannel = splitInput[1]
 								channelName= tempChannel[1:]
 
-								#channelsList[channelName]= channel
-								
-								#irc.sendall("does not exist")
 								newChannel = Channel(user,channelName)
 								channelsList.append(newChannel)
 
-							#try:
+							
 							user = clients[client_socket]
-							#except KeyError as k:
-								#print(k)
 
 							index = findChannel(channelName)
-							#channelsList[channelName].addUser(user)
 							channelsList[index].add_member(user)
 
-							#nicknames = "".join(y.nick for y in channelsList[index].members)
 							nicknames = " ".join(y.nickname for y in channelsList[index].members)
 
-							sendChannel(commandUser("JOIN " + splitInput[1], client), channelsList[channelName], notified_socket, sent =True )
-							message=(commandServer("Error 331: " +client.nickname +" ="+channelName +" :No topic is set")) + \
-									(commandServer("Error 353: " +client.nickname +" ="+channelName + nicknames )) + \
-									(commandServer("Error 353: " +client.nickname +" ="+channelName +" End of names"))
+							sendChannel(commandUser("JOIN " + splitInput[1], client), channelsList[index], notified_socket, sent=True )
+							message=(commandServer("Error 331: NO TOPIC " +client.nickname +" ="+channelName )) + \
+									(commandServer("Error 353: " +client.nickname +" ="+channelName + nicknames)) + \
+									(commandServer("Error 353: END OF NAMES " +client.nickname +" ="+channelName))
 							sendMsg(notified_socket, message)
 
 						elif(splitInput[0]=="NICK"):
 							if(client_socket in clients):
-								client = clients[client_socket]
-								client.setNickname(splitInput[1])
+								user = clients[client_socket]
+								user.setNickname(splitInput[1])
 							else:
-								clients[client_socket] = Client(client_socket, nickn = splitInput[1])
+								clients[client_socket] = Client(client_socket, nick = splitInput[1])
 
 						elif(splitInput[0]=="PRIVMSG"):
 							if(splitInput[1][0] == "#"):
-								channel = channelsList[channelName]
-								sendChannel(commandUser(input[x], clients[notified_socket]))
+								index = findChannel(channelName)
+								channel = channelsList[index]
+								sendChannel(commandUser(input[x], clients[notified_socket]), channel, notified_socket)
 							else:
 								nickname = splitInput[1]
 								for i in range(len(channel.members)):
@@ -225,12 +217,12 @@ def connect_server():
 
 					else:
 
-						print("ERROR")
+						print(" ")
 
 				#before attempting to read message, make sure it exists
 				if message is False:
 					print(f"Closed connection from {clients[notified_socket]['data'].decode('utf-8')}")
-					sockets_list.remove(notified_socket)
+					socketsList.remove(notified_socket)
 					del clients[notified_socket]
 					#continue
 					
@@ -240,23 +232,22 @@ def connect_server():
 						if client_socket != notified_socket:
 							#send user and message, both with headers
 							print("aaaaa")
-							#client_socket.send(user['header']+ user['data']+ message['header']+ message['data'])
 
 		#handles socket exception
 		for notified_socket in exception_sockets:
 			#remove list for socket
-			sockets_list.remove(notified_socket)
+			socketsList.remove(notified_socket)
 			#remove from list of users
 			del clients[notified_socket]
 
-def sendChannel(message, Channel, senderSocket, send=False):
+def sendChannel(message, channel, senderSocket, sent = False):
 #find socket for each member in channel; use socket list and get sockets/users in channel
 #send msg to only the sockets in channel
 
-	for i in range(len(channels.members)):
+	for i in range(len(channel.members)):
 		user = channel.members[i]
-		if (send or client.socket != senderSocket):
-			sendMsg(client.socket, message)
+		if (sent or user.socket != senderSocket):
+			sendMsg(user.socket, message)
 
 def receiveMsg(client_socket):
 	try:
@@ -268,18 +259,16 @@ def receiveMsg(client_socket):
 	except:
 		pass
 
+def sendMsg(socket, message):
+	print ("Send: " + message.decode('utf-8'))
+	socket.send(message)
+
 def commandServer(message):
 	return(":"+ socket.gethostname() + ""+ message+ "\r\n").encode("utf-8")
 
 def commandUser(message, client):
 	j = client.nickname + "!" + client.username + "@" + client.servername
+	return (":" + j + " " + message + "\r\n").encode("utf-8")
 
-
-def sendMsg(socket, message):
-	print ("Send: " + message.decode('utf-8'))
-	socket.send(message)
-
-
-	
 if __name__ == '__main__':
 	main()
