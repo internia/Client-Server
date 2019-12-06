@@ -98,14 +98,14 @@ def connect_server():
 	while True:
 
 		#recieve messages for all of the client sockets, then send messages to all client sockets
-		receive_sockets, _, exception_sockets = select.select(socketsList, [], socketsList)
+		receiveSockets, _, exceptionSockets = select.select(socketsList, [], socketsList)
 
 		#iterates through sockets which have data to be read 
-		for notifiedSocket in receive_sockets:
+		for notifiedSocket in receiveSockets:
 
 			if notifiedSocket == irc:
 				
-				clientSocket, client_address= irc.accept() 
+				clientSocket, clientAddress= irc.accept() 
 
 				clientSocket.setblocking(0)
 				
@@ -215,7 +215,7 @@ def connect_server():
 					del clients[notifiedSocket]
 
 		#handles socket exception
-		for notifiedSocket in exception_sockets:
+		for notifiedSocket in exceptionSockets:
 			#remove list for socket
 			socketsList.remove(notifiedSocket)
 			#remove from list of users
