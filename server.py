@@ -1,7 +1,6 @@
 import socket
 import select
 import sys, time
-import threading
 
 HEADER_LENGTH =400
 
@@ -23,6 +22,9 @@ print(f"Server established via Port:" + str(PORT))
 #create list of sockets connected to the server
 socketsList=[irc]
 
+#create list of socketsfor holding output
+outputSockets = []
+
 #create list of channels
 channelsList = []
 
@@ -31,22 +33,6 @@ clients = {}
 
 def main():
 	connect_server()
-
-#channel class initialises the channel members and names, and creates function which allows us to add members
-class Channel():
-	#create list of members
-	members = []
-	#channel name
-	name = ""
-
-	#initialising the variables used in the class
-	def __init__(self, user, name):
-		self.name = name
-		self.members.append(user)
-
-	#when this method is called, add new member to the channel member list
-	def add_member(self, user):
-		self.members.append(user)
 
 #client class initialises/gets/sets all the variables used to deal with the clients
 class Client():
@@ -71,27 +57,31 @@ class Client():
 	def getNickname(self):
 		return self.nickname
 
+#channel class initialises the channel members and names, and creates function which allows us to add members
+class Channel():
+	#create list of members
+	members = []
+	#channel name
+	name = ""
 
-def joinchannel(self, user, channelName):
-	print(channelsList)
-	print(channelName)
-	index = findChannel(channelName)
-	if index != -1:
-		irc.sendall("exists")
-		channelsList[index].add_member(user)
-		print(channelsList[index].members)
+	#initialising the variables used in the class
+	def __init__(self, user, name):
+		self.name = name
+		self.members.append(user)
 
-	else:
-		irc.sendall("does not exist")
-		newChannel = Channel(user,channelName)
-		channelsList.append(newChannel)
-		print(channelsList[index].members)
+	#when this method is called, add new member to the channel member list
+	def add_member(self, user):
+		self.members.append(user)
 
 
 def findChannel(channelName):
+	#for every element in channelsList
 	for index, Channel in enumerate(channelsList):
+		#If the name of the channel is equal to channelName
 		if Channel.name == channelName:
+			#return the index of the channel element in the list
 			return index
+	#if not found return -1
 	return -1
 
 
@@ -101,7 +91,6 @@ def createChannel(user, channelName):
 	#Add the new channel to the list of channels
 	channelsList.append(newChannel)
 
-outputSockets = []
 
 def connect_server():
 
@@ -124,10 +113,13 @@ def connect_server():
 			else:
 				message = receiveMsg(notifiedSocket)
 
-
+				#If the message is empty
 				if(message == ""):
+					#if notifiedSocket is in outputSockets
 					if notifiedSocket in outputSockets:
+						#remove notifiedSockets from outputSockets
 						outputSockets.remove(notifiedSocket)
+					#remove notifiedSockets from socketsList
 					socketsList.remove(notifiedSocket)
 					notifiedSocket.close()
 				
@@ -137,61 +129,62 @@ def connect_server():
 					print(k)
 					pass
 
+				#Split the input by line
 				splitInput = message.split("\r\n")
 
+				#For every line of the input
 				for x in range(len(splitInput)):
 
+					#If input is empty
 					if(splitInput[x] != ""):
-						
+						#Split input line by space
 						splitMessage = splitInput[x].split(" ")
-
-						if(splitMessage[0] == "CAP"):
-							print("DATA : ", splitMessage[0])
-							pass
-
+						#If command is USER
 						if(splitMessage[0] == "USER"):
-
 							#if the current client is in the list of clients
 							if(clientSocket in clients):
 								#set variable user to the current client
 								user = clients[clientSocket]
-								#set user's details
+								#set user's details (username, nickname etc.) from parameters provided in hexchat
 								user.setUserDetails(splitMessage[1], splitMessage[2], splitMessage[3], splitMessage[4])
 							else:
 								#create new instance of Client object
 								clients[clientSocket] = Client(clientSocket, userN = splitMessage[1], hostN = splitMessage[2], serverN = splitMessage[3], realN = splitMessage[4])
+						#If command is JOIN
 						elif(splitMessage[0]=="JOIN"):
+							#temp variable to hold second value in the array after the JOIN command
 							tempChannel = splitMessage[1]
+							#Sets channelName to tempChannel but ignoring the first character (#)
 							channelName= tempChannel[1:]
 							#if the list of channels is empty or the channelName is not inthe list of channels
 							if((len(channelsList)==0) or channelName not in channelsList): 
-								tempChannel = splitMessage[1]
-								# #set channel name to be entered channel name, ignoring the first character (#)
-								channelName= tempChannel[1:]
+								#Creates new channel
 								createChannel(user, channelName)
 
 							else:								
-								#add user to channel
+								#store current client in user variable
 								user = clients[clientSocket]
+								#finds index of channel being searched for
 								index = findChannel(channelName)
+								#adds user to the indexed channel in channelsList
 								channelsList[index].add_member(user)
 
 							index = findChannel(channelName)
-							#Append all nicknames of all the members
+							#Append all nicknames of all the members in the channel
 							nicknames = " ".join(y.nickname for y in channelsList[index].members)
 
+							#Sends join command from user to the channel
 							sendToChannel(commandUser("JOIN " + splitMessage[1], client), channelsList[index], notifiedSocket, sent=True )
-							message=(commandServer("Error 331: NO TOPIC " +client.nickname +" ="+channelName )) + \
-									(commandServer("Error 353: " +client.nickname +" ="+channelName + nicknames)) + \
-									(commandServer("Error 353: END OF NAMES " +client.nickname +" ="+channelName))
-							sendMsg(notifiedSocket, message)
+						#If command is NICK
 						elif(splitMessage[0]=="NICK"):
+							#If the current client is in the clients dictionary
 							if(clientSocket in clients):
+								#Set current client to user variable
 								user = clients[clientSocket]
-								#Set user's nickname
+								#Set user's nickname using parameter provided by hexchat
 								user.setNickname(splitMessage[1])
 							else:
-								#Create a new instance of a Client object
+								#Create a new instance of a Client object and add it to the clients dictionary
 								clients[clientSocket] = Client(clientSocket, nick = splitMessage[1])
 
 						elif(splitMessage[0]=="PRIVMSG"):
@@ -213,7 +206,6 @@ def connect_server():
 										#send message to that member
 										sendMsg(memberIndex.socket, commandUser(splitInput[x], clients[notifiedSocket]))
 					else:
-
 						print(" ")
 
 				#before reading message, make sure it exists
@@ -221,13 +213,6 @@ def connect_server():
 					print(f"Closed connection from {clients[notifiedSocket]['data'].decode('utf-8')}")
 					socketsList.remove(notifiedSocket)
 					del clients[notifiedSocket]
-					
-					#iterate through connected clients
-					for clientSocket in clients:
-						#with the exception of the sender
-						if clientSocket != notifiedSocket:
-							#send user and message, both with headers
-							print("aaaaa")
 
 		#handles socket exception
 		for notifiedSocket in exception_sockets:
@@ -237,16 +222,18 @@ def connect_server():
 			del clients[notifiedSocket]
 
 def sendToChannel(message, channel, senderSocket, sent = False):
-#find socket for each member in channel; use socket list and get sockets/users in channel
-#send msg to only the sockets in channel
-
+	#loop through every member in the channel
 	for i in range(len(channel.members)):
+		#set variable to user to the current member in th channel
 		user = channel.members[i]
+		#If the user is not yourself
 		if (sent or user.socket != senderSocket):
+			#Send message to user
 			sendMsg(user.socket, message)
 
 def receiveMsg(clientSocket):
 	try:
+		#Receive header length
 		msgR = clientSocket.recv(HEADER_LENGTH)
 		if not len(msgR):
 			return ""
