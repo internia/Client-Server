@@ -1,158 +1,267 @@
 import socket
 import select
+import sys, time
+import threading
 
-HEADER_LENGTH =10
+HEADER_LENGTH =400
 
 #ip address for server to listen on
 IP= "10.0.42.17"
 #tcp port number for server to listen to
-PORT= 1234
+PORT= 6667
 
 #create TCP server to use for listening to connections
-server_socket= socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR,1)
+irc= socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+irc.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR,1)
 #bind server socket to these addresses
-server_socket.bind((IP, PORT))
+irc.bind((IP, PORT))
 #make socket listen for connections
-server_socket.listen()
+irc.listen()
 
 print(f"Server established via Port:" + str(PORT))
 
 #create list of sockets connected to the server
-sockets_list=[server_socket]
-
-#dictionary of clients connected 
-clients = {}
+socketsList=[irc]
 
 #create list of channels
 channelsList = []
 
+#dictionary of clients connected 
+clients = {}
 
+def main():
+	connect_server()
+
+#channel class initialises the channel members and names, and creates function which allows us to add members
 class Channel():
-    members = []
-    name = ""
+	#create list of members
+	members = []
+	#channel name
+	name = ""
 
-    def __init__(self, user, name):
-        self.name = name
-        self.members.append(user)
+	#initialising the variables used in the class
+	def __init__(self, user, name):
+		self.name = name
+		self.members.append(user)
 
-    def add_member(self, user):
-        self.members.append(user)
+	#when this method is called, add new member to the channel member list
+	def add_member(self, user):
+		self.members.append(user)
 
-    def channelMsg():
-    	#for every client socket in members list
+#client class initialises/gets/sets all the variables used to deal with the clients
+class Client():
+	
+	def __init__(self, socket, nick=None, userN=None, hostN=None, serverN=None, realN=None):
+		self.nickname = nick
+		self.realname = realN
+		self.servername = serverN
+		self.username = userN
+		self.hostname = hostN
+		self.socket = socket
+
+	def setUserDetails(self, userN, hostN, serverN, realN):
+		self.realname = realN
+		self.servername = serverN
+		self.username = userN
+		self.hostname = hostN
+
+	def setNickname(self, newNick):
+		self.nickname = newNick
+
+	def getNickname(self):
+		return self.nickname
 
 
-#functions which recieves messages...
-def receive_message(client_socket):
-    try:
-    	#first step to receive message is to read the header
-    	message_header= client_socket.recv(HEADER_LENGTH)
+def joinchannel(self, user, channelName):
+	print(channelsList)
+	print(channelName)
+	index = findChannel(channelName)
+	if index != -1:
+		irc.sendall("exists")
+		channelsList[index].add_member(user)
+		print(channelsList[index].members)
 
-    	#if connection closes, there is no header
-        if not len(message_header):
-            return False
-
-        #convert header to a length
-        message_length= int(message_header.decode("utf-8").strip())
-
-        #prints header and data
-        return {"header": message_header, "data": client_socket.recv(message_length)}
-
-    except:
-        return False
-
-
-def parseInput(test, user, message):
-	#split message by space
-    messageArray = message.split()
-	#if the first word of the message is join
-    if messageArray[0] == "JOIN":
-		#check if the start of the next word contains & or #
-        if messageArray[1].__contains__("&") or messageArray[1].__contains__("#"):
-			#store second word of message in temp variable
-            temp = messageArray[1]
-			#store contents of temp variable from second character onwards
-            channelName = temp[1:]
-            test.joinchannel(user,channelName)
-
-class Test:
-	def joinchannel(self, user, channelName):
-		print(channelsList)
-		print(channelName)
-		index = findChannel(channelName)
-		if index != -1:
-			print("exists")
-			channelsList[index].add_member(user)
-			print(channelsList[index].members)
-		else:
-			print("does not exist")
-			newChannel = Channel(user,channelName)
-			channelsList.append(newChannel)
-			print(channelsList[index].members)
+	else:
+		irc.sendall("does not exist")
+		newChannel = Channel(user,channelName)
+		channelsList.append(newChannel)
+		print(channelsList[index].members)
 
 
 def findChannel(channelName):
-    for index, Channel in enumerate(channelsList):
-        if Channel.name == channelName:
-            return index
-    return -1
+	for index, Channel in enumerate(channelsList):
+		if Channel.name == channelName:
+			return index
+	return -1
 
-test = Test()
-#in a continous loop...
-while True:
-    #recieve messages for all of the client sockets, then send messages to all client sockets
-	read_sockets, _, exception_sockets = select.select(sockets_list, [], sockets_list)
+#join = Join()
 
-    #iterates through sockets which have data to be read 
-	for notified_socket in read_sockets:
-		if notified_socket == server_socket:
-			client_socket, client_address= server_socket.accept()
+outputSockets = []
+messageQueues = {}
 
-			user = receive_message(client_socket)
-			if user is False:
-				continue
-            
-            #append new client to socket list
-			sockets_list.append(client_socket)
-            
-            #save client username as the value to the key which is the socket object
-			clients[client_socket] = user
+def connect_server():
 
-			#accepted connection from: username
-			print(f"Accepted new connection from {client_address[0]}:{client_address[1]} username:{user['data'].decode('utf-8')}")
+	#in a continous loop...
+	while True:
 
-		#if not new client
-		else:
-			message= receive_message(notified_socket)
+		#recieve messages for all of the client sockets, then send messages to all client sockets
+		receive_sockets, _, exception_sockets = select.select(socketsList, [], socketsList)
 
-			#before attempting to read message, make sure it exists
-			if message is False:
-				print(f"Closed connection from {clients[notified_socket]['data'].decode('utf-8')}")
-				sockets_list.remove(notified_socket)
-				del clients[notified_socket]
-				continue
+		#iterates through sockets which have data to be read 
+		for notified_socket in receive_sockets:
 
-			#print message info
-			user = clients[notified_socket]
-			print(f"Received message from {user['data'].decode('utf-8')}: {message['data'].decode('utf-8')}")
-			print(f"{user['data'].decode('utf-8')}, {message['data'].decode('utf-8')}")
-			parseInput(test, f"{user['data'].decode('utf-8')}", f"{message['data'].decode('utf-8')}")
+			if notified_socket == irc:
+				
+				client_socket, client_address= irc.accept() 
 
-			#iterate through connected clients
-			for client_socket in clients:
-				#with the exception of the sender
-				if client_socket != notified_socket:
-					#send user and message, both with headers
-					client_socket.send(user['header']+ user['data']+ message['header']+ message['data'])
-
-	#handles socket exception
-	for notified_socket in exception_sockets:
-		#remove list for socket
-		sockets_list.remove(notified_socket)
-		#remove from list of users
-		del clients[notified_socket]
+				client_socket.setblocking(0)
+				
+				socketsList.append(client_socket)
+			else:
+				message = receiveMsg(notified_socket)
 
 
+				if(message == ""):
+					if notified_socket in outputSockets:
+						outputSockets.remove(notified_socket)
+					socketsList.remove(notified_socket)
+					notified_socket.close()
+				
+				try:
+					client = clients[notified_socket]
+				except KeyError as k:
+					print(k)
+					pass
+
+				splitInput = message.split("\r\n")
+
+				for x in range(len(splitInput)):
+
+					if(splitInput[x] != ""):
+						
+						splitMessage = splitInput[x].split(" ")
+
+						if(splitMessage[0] == "CAP"):
+							print("DATA : ", splitMessage[0])
+							pass
+
+						if(splitMessage[0] == "USER"):
+
+							#if the current client is in the list of clients
+							if(client_socket in clients):
+								#set variable user to the current client
+								user = clients[client_socket]
+								#set user's details
+								user.setUserDetails(splitMessage[1], splitMessage[2], splitMessage[3], splitMessage[4])
+							else:
+								#create new instance of Client object
+								clients[client_socket] = Client(client_socket, userN = splitMessage[1], hostN = splitMessage[2], serverN = splitMessage[3], realN = splitMessage[4])
+						elif(splitMessage[0]=="JOIN"):
+							tempChannel = splitMessage[1]
+							channelName= tempChannel[1:]
+							#if the list of channels is empty or the channelName is not inthe list of channels
+							if((len(channelsList)==0) or channelName not in channelsList): 
+								tempChannel = splitMessage[1]
+								#set channel name to be entered channel name, ignoring the first character (#)
+								channelName= tempChannel[1:]
+
+								#Create a new instance of the Channel object
+								newChannel = Channel(user,channelName)
+								#Add the new channel to the list of channels
+								channelsList.append(newChannel)
+
+							user = clients[client_socket]
+							index = findChannel(channelName)
+							channelsList[index].add_member(user)
+
+							#Append all nicknames of all the members
+							nicknames = " ".join(y.nickname for y in channelsList[index].members)
+
+							sendToChannel(commandUser("JOIN " + splitMessage[1], client), channelsList[index], notified_socket, sent=True )
+							message=(commandServer("Error 331: NO TOPIC " +client.nickname +" ="+channelName )) + \
+									(commandServer("Error 353: " +client.nickname +" ="+channelName + nicknames)) + \
+									(commandServer("Error 353: END OF NAMES " +client.nickname +" ="+channelName))
+							sendMsg(notified_socket, message)
+						elif(splitMessage[0]=="NICK"):
+							if(client_socket in clients):
+								user = clients[client_socket]
+								#Set user's nickname
+								user.setNickname(splitMessage[1])
+							else:
+								#Create a new instance of a Client object
+								clients[client_socket] = Client(client_socket, nick = splitMessage[1])
+
+						elif(splitMessage[0]=="PRIVMSG"):
+							if(splitMessage[1][0] == "#"):
+								#find the channel mentioned in the list and store the index
+								index = findChannel(channelName)
+								#store the found channel in the channel variable
+								channel = channelsList[index]
+								#send message to channel
+								sendToChannel(commandUser(splitInput[x], clients[notified_socket]), channel, notified_socket)
+							else:
+								nickname = splitMessage[1]
+								#find member by nickname by iterating through all members
+								for i in range(len(channel.members)):
+									#store current member being iterated through in memberIndex variable
+									memberIndex = channel.members[i]
+									#if the member's nickname matches the nickname being searched for
+									if(memberIndex.nickname == nickname):
+										#send message to that member
+										sendMsg(memberIndex.socket, commandUser(splitInput[x], clients[notified_socket]))
+					else:
+
+						print(" ")
+
+				#before reading message, make sure it exists
+				if message is False:
+					print(f"Closed connection from {clients[notified_socket]['data'].decode('utf-8')}")
+					socketsList.remove(notified_socket)
+					del clients[notified_socket]
+					
+					#iterate through connected clients
+					for client_socket in clients:
+						#with the exception of the sender
+						if client_socket != notified_socket:
+							#send user and message, both with headers
+							print("aaaaa")
+
+		#handles socket exception
+		for notified_socket in exception_sockets:
+			#remove list for socket
+			socketsList.remove(notified_socket)
+			#remove from list of users
+			del clients[notified_socket]
+
+def sendToChannel(message, channel, senderSocket, sent = False):
 #find socket for each member in channel; use socket list and get sockets/users in channel
 #send msg to only the sockets in channel
+
+	for i in range(len(channel.members)):
+		user = channel.members[i]
+		if (sent or user.socket != senderSocket):
+			sendMsg(user.socket, message)
+
+def receiveMsg(client_socket):
+	try:
+		msgR = client_socket.recv(HEADER_LENGTH)
+		if not len(msgR):
+			return ""
+		return msgR.decode('utf-8')
+	except:
+		return ""
+		pass
+
+def sendMsg(socket, message):
+	print ("Send: " + message.decode('utf-8'))
+	socket.send(message)
+
+def commandServer(message):
+	return(":"+ socket.gethostname() + ""+ message+ "\r\n").encode("utf-8")
+
+def commandUser(message, client):
+	j = client.nickname + "!" + client.username + "@" + client.servername
+	return (":" + j + " " + message + "\r\n").encode("utf-8")
+
+if __name__ == '__main__':
+	main()
